@@ -16,9 +16,11 @@ st.title("Control de Referidos")
 '''
 Esta aplicación permite conocer qué usuario es referido de quién 
 '''
-url = 'https://github.com/cdalvarezb27/App-Referidos-Somos/blob/9c147ce4c8cea9e2e22e09ab97c700ab274b4ec0/referidos.xlsx?raw=true'
-df = pd.read_excel(url, engine='openpyxl')
+
+df = pd.read_excel("referidos.xlsx")
 df['instalaciones_tiempo_kustomer'] = pd.to_datetime(df['instalaciones_tiempo_kustomer'], format='%Y-%m-%d')
+df['Created_referido'] = pd.to_datetime(df['Created_referido'], format='%Y-%m-%d')
+
 df['phone_referido'] = df['phone_referido'].astype(str)
 df['codigo_referidos'] = df['codigo_referidos'].astype(str)
 
@@ -28,8 +30,8 @@ unique_subscription_status = df['suscripcion_status'].unique()
 unique_installation_valid = df['instal_valid (from suscripciones)'].unique()
 
 # Verificar si las fechas son objetos de tipo date/datetime
-min_date = df['instalaciones_tiempo_kustomer'].min()
-max_date = df['instalaciones_tiempo_kustomer'].max()
+min_date = df['Created_referido'].min()
+max_date = df['Created_referido'].max()
 
 if isinstance(min_date, (datetime.date, datetime.datetime)) and isinstance(max_date, (datetime.date, datetime.datetime)):
     
@@ -50,10 +52,10 @@ if isinstance(min_date, (datetime.date, datetime.datetime)) and isinstance(max_d
     </style>
     """, unsafe_allow_html=True)
 
-    st.sidebar.write('**Filtro por fecha de instalación**')
+    st.sidebar.write('**Filtro por fecha de Creación del referido**')
     # Mostrar los widgets de fecha en el sidebar
-    start_date = pd.to_datetime(st.sidebar.date_input('instalaciones (Fecha de inicio)', min_date))
-    end_date = pd.to_datetime(st.sidebar.date_input('instalaciones (Fecha de fin)', max_date))
+    start_date = pd.to_datetime(st.sidebar.date_input('Created_referido (Fecha de inicio)', min_date))
+    end_date = pd.to_datetime(st.sidebar.date_input('Created_referido (Fecha de fin)', max_date))
     
     st.sidebar.write('**Otros filtros**')
     # Mostrar los widgets de los filtros en el sidebar
@@ -61,7 +63,7 @@ if isinstance(min_date, (datetime.date, datetime.datetime)) and isinstance(max_d
     selected_installation_valid = st.sidebar.multiselect("Selecciona una instalación válida", unique_installation_valid)
 
     # Construir el filtro progresivamente
-    filtered_data = df[df['instalaciones_tiempo_kustomer'].between(start_date, end_date)]
+    filtered_data = df[df['Created_referido'].between(start_date, end_date)]
     
     if selected_subscription_status:
         filtered_data = filtered_data[filtered_data['suscripcion_status'].isin(selected_subscription_status)]
@@ -87,4 +89,6 @@ if isinstance(min_date, (datetime.date, datetime.datetime)) and isinstance(max_d
 else:
     # Mostrar mensaje de error si las fechas no son válidas
     st.write('Error: las fechas no son válidas')
+
+
 
