@@ -1,0 +1,18 @@
+pandas == 1.5.3
+pyairtable
+seaborn
+matplotlib
+plotly
+numpy
+gspread
+airtable
+openpyxl
+streamlit
+plotly
+nbformat
+pydeck
+utils
+datetime
+python-dotenv
+numpy
+plotly
