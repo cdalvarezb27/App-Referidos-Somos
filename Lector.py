@@ -16,7 +16,7 @@ st.title("Control de Referidos")
 '''
 Esta aplicación permite conocer qué usuario es referido de quién 
 '''
-url = 'https://github.com/cdalvarezb27/App-Referidos-Somos/blob/4c0bd34e5bad0e4236c7fffd31b5b8db4d5a37da/referidos.xlsx?raw=true'
+url = 'https://github.com/cdalvarezb27/App-Referidos-Somos/blob/4c0bd34e5bad0e4236c7fffd31b5b8db4d5a37da/referidos.xlsx'
 df = pd.read_excel(url, engine='openpyxl')
 df['instalaciones_tiempo_kustomer'] = pd.to_datetime(df['instalaciones_tiempo_kustomer'], format='%Y-%m-%d')
 df['phone_referido'] = df['phone_referido'].astype(str)
