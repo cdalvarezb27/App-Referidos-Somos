@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import datetime
@@ -27,7 +26,8 @@ df['codigo_referidos'] = df['codigo_referidos'].astype(str)
 
 # Obtener los valores únicos de las columnas 'suscripcion status' y 'instal_valid'
 unique_subscription_status = df['suscripcion_status'].unique()
-unique_installation_valid = df['instal_valid (from suscripciones)'].unique()
+unique_created_valid = df['Created_referido'].unique()
+unique_state_stepper = df['state_stepper (from Site)'].unique()
 
 # Verificar si las fechas son objetos de tipo date/datetime
 min_date = df['Created_referido'].min()
@@ -60,7 +60,8 @@ if isinstance(min_date, (datetime.date, datetime.datetime)) and isinstance(max_d
     st.sidebar.write('**Otros filtros**')
     # Mostrar los widgets de los filtros en el sidebar
     selected_subscription_status = st.sidebar.multiselect("Selecciona un estado de suscripción", unique_subscription_status)
-    selected_installation_valid = st.sidebar.multiselect("Selecciona una instalación válida", unique_installation_valid)
+    selected_created_valid = st.sidebar.multiselect("Selecciona una instalación válida", unique_created_valid)
+    selected_state_stepper = st.sidebar.multiselect("Selecciona el estado del site",unique_state_stepper)
 
     # Construir el filtro progresivamente
     filtered_data = df[df['Created_referido'].between(start_date, end_date)]
@@ -68,9 +69,14 @@ if isinstance(min_date, (datetime.date, datetime.datetime)) and isinstance(max_d
     if selected_subscription_status:
         filtered_data = filtered_data[filtered_data['suscripcion_status'].isin(selected_subscription_status)]
         
-    if selected_installation_valid:
-        filtered_data = filtered_data[filtered_data['instal_valid (from suscripciones)'].isin(selected_installation_valid)]
-
+    if selected_created_valid:
+        filtered_data = filtered_data[filtered_data['instal_valid (from suscripciones)'].isin(selected_created_valid)]
+    
+    if selected_state_stepper:
+        filtered_data = filtered_data[filtered_data['state_stepper (from Site)'].isin(selected_state_stepper)]
+    
+        
+    
     # Mostrar el dataframe filtrado
     st.write(filtered_data)
     
@@ -89,6 +95,8 @@ if isinstance(min_date, (datetime.date, datetime.datetime)) and isinstance(max_d
 else:
     # Mostrar mensaje de error si las fechas no son válidas
     st.write('Error: las fechas no son válidas')
+
+
 
 
 
