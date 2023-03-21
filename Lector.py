@@ -3,6 +3,8 @@ import pandas as pd
 import datetime
 import base64
 import io
+import matplotlib.pyplot as plt
+
 
 st.set_page_config(
     page_icon=":shark:"
@@ -34,7 +36,7 @@ min_date = df['Created_referido'].min()
 max_date = df['Created_referido'].max()
 
 if isinstance(min_date, (datetime.date, datetime.datetime)) and isinstance(max_date, (datetime.date, datetime.datetime)):
-    
+
     
     
     #ff000050
@@ -81,7 +83,6 @@ if isinstance(min_date, (datetime.date, datetime.datetime)) and isinstance(max_d
     st.write(filtered_data)
     
     # Agregar botón de descarga
-
     if st.button('Descargar XLSX'):
         # Codificar el dataframe en base64
         towrite = io.BytesIO()
@@ -92,10 +93,40 @@ if isinstance(min_date, (datetime.date, datetime.datetime)) and isinstance(max_d
         href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="referidos.xlsx">Descargar archivo XLSX</a>'
         st.markdown(href, unsafe_allow_html=True)
 
+    
+    filtered_data_2 = filtered_data.copy()
+    
+    filtered_data_2 = filtered_data_2[['nombre_del_cliente_referidor']]
+    
+    grouped_df = filtered_data_2.groupby('nombre_del_cliente_referidor').value_counts().to_frame().reset_index()
+    
+    grouped_df = grouped_df.rename(columns={0: 'cuenta'})
+
+
+    st.title("Gráfico de usuarios top referidores")
+
+    unique_referidos = grouped_df['cuenta'].unique()
+    
+    st.write('**filtro de # de referidos**')
+    # Mostrar los widgets de los filtros en el sidebar
+    selected_referidos = st.multiselect("Selecciona un # de referidos", unique_referidos)
+    if selected_referidos:
+        grouped_df = grouped_df[grouped_df['cuenta'].isin(selected_referidos)]
+    
+
+    import altair as alt
+    # Create a bar chart using Altair
+    bar_chart = alt.Chart(grouped_df).mark_bar().encode(
+        x=alt.X('nombre_del_cliente_referidor', sort=alt.EncodingSortField(field='cuenta', order='descending')),
+        y='cuenta'
+    )
+    
+    st.altair_chart(bar_chart, use_container_width=True)
+    
+    
 else:
     # Mostrar mensaje de error si las fechas no son válidas
     st.write('Error: las fechas no son válidas')
-
 
 
 
