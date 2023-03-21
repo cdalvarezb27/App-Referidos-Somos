@@ -26,7 +26,7 @@ df['codigo_referidos'] = df['codigo_referidos'].astype(str)
 
 # Obtener los valores únicos de las columnas 'suscripcion status' y 'instal_valid'
 unique_subscription_status = df['suscripcion_status'].unique()
-unique_created_valid = df['Created_referido'].unique()
+unique_created_valid = df['instal_valid (from suscripciones)'].unique()
 unique_state_stepper = df['state_stepper (from Site)'].unique()
 
 # Verificar si las fechas son objetos de tipo date/datetime
