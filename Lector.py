@@ -1,154 +1,134 @@
-from pyairtable import Api, Base, Table
-import json
+
+import streamlit as st
 import pandas as pd
-from datetime import datetime
-import numpy as np
+import datetime
+import base64
+import io
+import matplotlib.pyplot as plt
 
 
-
-# AQUÍ ESTÁN LOS REFERIDOS
-
-
-# Se extraen los datos de AirTable, LEADS
-def TableDF_Leads(api_key: str, base_id: str, table: str):
-
-    columns = {}
-    table = Table('keyufJoR9jMxHMJ19', 'appCOsc9IIngeHhwO', 'Leads')
-    table_data = table.all()
-    if len(table_data) > 0:
- 
-        columns = {col: [] for col in table_data[0]["fields"].keys()}
-        entries = [{col: row["fields"][col] for col in row["fields"].keys()} for row in table_data]
-        df = pd.DataFrame(entries)
-        return df
-    else:
-        return None
-
-# Devuelve los datos extraídos como DataFrame
-df = TableDF_Leads('keyufJoR9jMxHMJ19', 'appCOsc9IIngeHhwO', 'Leads')
-
-# FILTROS AL DATAFRAME DE LEADS
-
-df['Created'] = pd.to_datetime(df['Created'])
-
-df_2 = df.loc[df['utm_source'] == 'referidos']
-
-#df_2 = df_2.loc[df_2['Created'] > '2023-02-06']
-
-df_2 = df_2[df_2['codigo_referidos'].notnull()]
+st.set_page_config(
+    page_icon=":shark:"
+)
+st.sidebar.image("https://scontent-bog1-1.xx.fbcdn.net/v/t39.30808-6/286883597_158534336684733_9125584544552296429_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=09cbfe&_nc_ohc=yIRlt9XkYbMAX__pBUw&_nc_ht=scontent-bog1-1.xx&oh=00_AfAwT5h0Esx4KlJVPRgfrWIrQLAE6tkoWYXRnY4XGkBMqA&oe=64159770", width=50)
 
 
-df_2 = df_2[["phone","Name", "Created", "codigo_referidos","state_stepper (from Site)"]]
+st.title("Control de Referidos")
 
-# Renombrar columnas de un dataframe:
-df_2.rename({
-             'phone': 'phone_referido','Name': 'Name_referido',
-             'Created': 'Created_referido'}, axis=1, inplace=True)
+'''
+Esta aplicación permite conocer qué usuario es referido de quién 
+'''
 
+df = pd.read_excel("referidos.xlsx")
+df['instalaciones_tiempo_kustomer'] = pd.to_datetime(df['instalaciones_tiempo_kustomer'], format='%Y-%m-%d')
+df['Created_referido'] = pd.to_datetime(df['Created_referido'], format='%Y-%m-%d')
 
-# AQUÍ ESTÁN LOS QUE REFIEREN
-
-
-# Se extraen los datos de AirTable
-def TableDF_Mark2(api_key: str, base_id: str, table: str):
-
-    columns = {}
-    table = Table('keyufJoR9jMxHMJ19', 'appDdtDE2hIHGnU8k', 'Referidos')
-    table_data = table.all()
-    if len(table_data) > 0:
- 
-        columns = {col: [] for col in table_data[0]["fields"].keys()}
-        entries = [{col: row["fields"][col] for col in row["fields"].keys()} for row in table_data]
-        df = pd.DataFrame(entries)
-        return df
-    else:
-        return None
-
-# Devuelve los datos extraídos como DataFrame
-df_referidores = TableDF_Mark2('keyufJoR9jMxHMJ19', 'appDdtDE2hIHGnU8k', 'Referidos')
-
-df_referidores = df_referidores[["nombre_del_cliente","email","code","phone_number"]]
-
-df_referidores.rename({'nombre_del_cliente': 'nombre_del_cliente_referidor','email': 'email_referidor',
-                       'code':'code_referidor','phone_number':'phone_number_referidor'}, axis=1, inplace=True)
+df['phone_referido'] = df['phone_referido'].astype(str)
+df['codigo_referidos'] = df['codigo_referidos'].astype(str)
 
 
-# AQUÍ EL MERGE ENTRE REFERIDOS Y LOS QUE REFIEREN
+# Obtener los valores únicos de las columnas 'suscripcion status' y 'instal_valid'
+unique_subscription_status = df['suscripcion_status'].unique()
+unique_created_valid = df['instal_valid (from suscripciones)'].unique()
+unique_state_stepper = df['state_stepper (from Site)'].unique()
+
+# Verificar si las fechas son objetos de tipo date/datetime
+min_date = df['Created_referido'].min()
+max_date = df['Created_referido'].max()
+
+if isinstance(min_date, (datetime.date, datetime.datetime)) and isinstance(max_date, (datetime.date, datetime.datetime)):
+
+    
+    
+    #ff000050
+    primaryColor="#F63366"
+    backgroundColor="#FFFFFF"
+    secondaryBackgroundColor="#F0F2F6"
+    textColor="#262730"
+    font="serif"
+
+    st.markdown("""
+    <style>
+        [data-testid=stSidebar] {
+            background-color: #F4F4F4;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.sidebar.write('**Filtro por fecha de Creación del referido**')
+    # Mostrar los widgets de fecha en el sidebar
+    start_date = pd.to_datetime(st.sidebar.date_input('Created_referido (Fecha de inicio)', min_date))
+    end_date = pd.to_datetime(st.sidebar.date_input('Created_referido (Fecha de fin)', max_date))
+    
+    st.sidebar.write('**Otros filtros**')
+    # Mostrar los widgets de los filtros en el sidebar
+    selected_subscription_status = st.sidebar.multiselect("Selecciona un estado de suscripción", unique_subscription_status)
+    selected_created_valid = st.sidebar.multiselect("Selecciona una instalación válida", unique_created_valid)
+    selected_state_stepper = st.sidebar.multiselect("Selecciona el estado del site",unique_state_stepper)
+
+    # Construir el filtro progresivamente
+    filtered_data = df[df['Created_referido'].between(start_date, end_date)]
+    
+    if selected_subscription_status:
+        filtered_data = filtered_data[filtered_data['suscripcion_status'].isin(selected_subscription_status)]
+        
+    if selected_created_valid:
+        filtered_data = filtered_data[filtered_data['instal_valid (from suscripciones)'].isin(selected_created_valid)]
+    
+    if selected_state_stepper:
+        filtered_data = filtered_data[filtered_data['state_stepper (from Site)'].isin(selected_state_stepper)]
+    
+        
+    
+    # Mostrar el dataframe filtrado
+    st.write(filtered_data)
+    
+    # Agregar botón de descarga
+    if st.button('Descargar XLSX'):
+        # Codificar el dataframe en base64
+        towrite = io.BytesIO()
+        downloaded_file = filtered_data.to_excel(towrite, encoding='utf-8', index=False, header=True)
+        towrite.seek(0)  # Asegurarse de que el cursor esté al inicio del archivo
+        # Codificar el archivo en base64 para descargarlo como un archivo
+        b64 = base64.b64encode(towrite.read()).decode()
+        href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="referidos.xlsx">Descargar archivo XLSX</a>'
+        st.markdown(href, unsafe_allow_html=True)
+
+    
+    filtered_data_2 = filtered_data.copy()
+    
+    filtered_data_2 = filtered_data_2[['nombre_del_cliente_referidor']]
+    
+    grouped_df = filtered_data_2.groupby('nombre_del_cliente_referidor').value_counts().to_frame().reset_index()
+    
+    grouped_df = grouped_df.rename(columns={0: 'cuenta'})
 
 
+    st.title("Gráfico de usuarios top referidores")
 
-referidos_referidores = pd.merge(df_referidores, df_2, left_on='code_referidor',right_on='codigo_referidos', how='inner')
+    unique_referidos = grouped_df['cuenta'].unique()
+    
+    st.write('**filtro de # de referidos**')
+    # Mostrar los widgets de los filtros en el sidebar
+    selected_referidos = st.multiselect("Selecciona un # de referidos", unique_referidos)
+    if selected_referidos:
+        grouped_df = grouped_df[grouped_df['cuenta'].isin(selected_referidos)]
+    
 
-
-# Se extraen los datos de AirTable
-def TableDF_Mark2_customers(api_key: str, base_id: str, table: str):
-
-    columns = {}
-    table = Table('keyufJoR9jMxHMJ19', 'appDdtDE2hIHGnU8k', 'customers')
-    table_data = table.all()
-    if len(table_data) > 0:
- 
-        columns = {col: [] for col in table_data[0]["fields"].keys()}
-        entries = [{col: row["fields"][col] for col in row["fields"].keys()} for row in table_data]
-        df = pd.DataFrame(entries)
-        return df
-    else:
-        return None
-
-# Devuelve los datos extraídos como DataFrame
-df_customers = TableDF_Mark2_customers('keyufJoR9jMxHMJ19', 'appDdtDE2hIHGnU8k', 'customers')
-
-# Instal valid
-
-df_customers_2 = df_customers[["customer_phone","instalaciones_tiempo_kustomer","instal_valid (from suscripciones)","suscripcion_status"]]
-
-
-df_customers_2['instalaciones_tiempo_kustomer'] = df_customers_2['instalaciones_tiempo_kustomer'].str.split(',').str[-1]
+    import altair as alt
+    # Create a bar chart using Altair
+    bar_chart = alt.Chart(grouped_df).mark_bar().encode(
+        x=alt.X('nombre_del_cliente_referidor', sort=alt.EncodingSortField(field='cuenta', order='descending')),
+        y='cuenta'
+    )
+    
+    st.altair_chart(bar_chart, use_container_width=True)
+    
+    
+else:
+    # Mostrar mensaje de error si las fechas no son válidas
+    st.write('Error: las fechas no son válidas')
 
 
-# Eliminamos los espacios vacíos de los registros en la columna
-df_customers_2['instalaciones_tiempo_kustomer'] = df_customers_2['instalaciones_tiempo_kustomer'].str.strip()
-
-
-df_customers_2['customer_phone'] = df_customers_2['customer_phone'].str.replace('\+57', '')
-
-
-df_referidos_referidores_instal = pd.merge(referidos_referidores, df_customers_2, left_on='phone_referido',right_on='customer_phone', how='left')
-
-
-
-df_referidos_referidores_instal_copy = df_referidos_referidores_instal.copy()
-
-
-cols_to_convert = ["instal_valid (from suscripciones)","suscripcion_status","state_stepper (from Site)"]
-
-df_referidos_referidores_instal_copy[cols_to_convert] = df_referidos_referidores_instal_copy[cols_to_convert].apply(lambda x: x.astype(str))
-
-for col in cols_to_convert:
-    df_referidos_referidores_instal_copy[col] = df_referidos_referidores_instal_copy[col].str.replace('[','').str.replace(']','').str.replace("'","")
-
-
-#df_referidos_referidores_instal_copy=df_referidos_referidores_instal_copy.loc[df_referidos_referidores_instal_copy['instal_valid (from suscripciones)'] == 'completa']
-
-
-# Convertir la columna de fecha a tipo datetime
-df_referidos_referidores_instal_copy['instalaciones_tiempo_kustomer'] = pd.to_datetime(df_referidos_referidores_instal_copy['instalaciones_tiempo_kustomer'])
-
-#df_referidos_referidores_instal_copy['Created_referido'] = pd.to_datetime(df_referidos_referidores_instal_copy['Created_referido'])
-
-df_referidos_referidores_instal_copy['Created_referido'] = df_referidos_referidores_instal_copy['Created_referido'].dt.tz_convert(None).dt.strftime('%Y-%m-%d')
-
-df_referidos_referidores_instal_copy['instalaciones_tiempo_kustomer'] = df_referidos_referidores_instal_copy['instalaciones_tiempo_kustomer'].dt.strftime('%Y-%m-%d')
-
-
-df_referidos_referidores_instal_copy = df_referidos_referidores_instal_copy[['nombre_del_cliente_referidor', 'email_referidor',
-       'phone_number_referidor','Created_referido',  'Name_referido', 'phone_referido',
-       'codigo_referidos', 'instalaciones_tiempo_kustomer',
-       'instal_valid (from suscripciones)', 'suscripcion_status','state_stepper (from Site)']]
-
-
-writer = pd.ExcelWriter('referidos.xlsx', engine='xlsxwriter')
-df_referidos_referidores_instal_copy.to_excel(writer, index=False)
-writer.save()
 
 
