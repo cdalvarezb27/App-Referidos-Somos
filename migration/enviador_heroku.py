@@ -4,7 +4,7 @@ from integrador import df_quotes, df_customers, df_subsites, df_sites, df_addres
 from sqlalchemy import create_engine
 import psycopg2
 
-engine = create_engine('postgresql+psycopg2://pkgplptxcoasph:f1044c330298ce191e58dc67765ec63e582563e489d9fd75b2e8dad3ce85bb79@ec2-3-234-204-26.compute-1.amazonaws.com:5432/d9gg37ud6998ra')
+engine = create_engine('Your Database connection')
 
 
 df_addresses.to_sql('addresses', con=engine, if_exists='append', index=False)
